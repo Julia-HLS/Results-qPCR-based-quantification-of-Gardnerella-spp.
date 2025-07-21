@@ -106,8 +106,8 @@ ggplot(paired_data, aes(x = Vaginal, y = `Penile skin`)) +
   # Axis titles
   labs(
     title = expression(italic("Gardnerella spp.") * " load: vaginal and penile within couples at Timepoint 1"),
-    x = "Vaginal (log10 DNA copies/swab)",
-    y = "Penile skin (log10 DNA copies/swab)"
+    x = expression( "Vaginal log10 DNA copy number (" *italic("Gardnerella spp.")* ")" ),
+    y = expression( "Penile log10 DNA copy number (" *italic("Gardnerella spp.")* ")" )
   ) +
   
   theme_minimal() +
