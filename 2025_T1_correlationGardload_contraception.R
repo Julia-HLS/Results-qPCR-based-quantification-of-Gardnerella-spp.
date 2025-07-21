@@ -32,14 +32,18 @@ mastertable <- read_excel("2025_mastertable_adjusted_allTimepoints.xlsx",
                                                                "text", "text", "text",
                                                                "text", "text", "text"))
 
-#Prepare paired data
+# Prepare paired data: filter, group, and reshape
 paired_data <- mastertable %>%
-  filter(timepoint == "t0",
-         Body_site %in% c("vaginal_fluid", "penile_skin"),
-         !is.na(GV_log_copies_swab)) %>%
-  mutate(Body_site = factor(Body_site,
-                            levels = c("vaginal_fluid", "penile_skin"),
-                            labels = c("Vaginal", "Penile skin"))) %>%
+  filter(
+    timepoint == "t1",
+    Body_site %in% c("vaginal_fluid", "penile_skin"),
+    !is.na(GV_log_copies_swab)
+  ) %>%
+  mutate(
+    Body_site = factor(Body_site,
+                       levels = c("vaginal_fluid", "penile_skin"),
+                       labels = c("Vaginal", "Penile skin"))
+  ) %>%
   group_by(couple_no, Body_site) %>%
   summarise(mean_log = mean(GV_log_copies_swab), .groups = "drop") %>%
   pivot_wider(names_from = Body_site, values_from = mean_log) %>%
@@ -48,6 +52,7 @@ paired_data <- mastertable %>%
 # If at least one person says "yes" → “yes”
 # If everyone says "no" → "no"
 # If only "not_available" remains → "not available"
+
 protection_per_pair <- mastertable %>%
   filter(!is.na(protection)) %>%
   group_by(couple_no) %>%
@@ -55,13 +60,17 @@ protection_per_pair <- mastertable %>%
     protection = case_when(
       any(protection == "yes") ~ "yes",
       all(protection == "no") ~ "no",
-      TRUE ~ "not_available"
-    ), .groups = "drop"
+      TRUE ~ "not available"
+    ),
+    .groups = "drop"
   )
+
+#view(protection_per_pair)
 
 paired_data <- paired_data %>%
   left_join(protection_per_pair, by = "couple_no") %>%
   mutate(protection = factor(protection, levels = c("yes", "no", "not_available")))
+#view(paired_data)
 
 # Run Spearman correlation
 cor_test <- cor.test(paired_data$Vaginal, paired_data$`Penile skin`, method = "spearman")
@@ -75,9 +84,10 @@ intercept <- round(coef(lm_model)[1], 2)
 p_lm <- format.pval(summary(lm_model)$coefficients[2, 4], digits = 3)
 r2 <- round(summary(lm_model)$r.squared, 2)
 
-# Plot
-png("Plots/T0_Gspp_load_vaginal_penile_protection.png", width = 2700, height = 1200, res = 300)
+#open PNG-Grafikgerät
+png("Plots/T1_Gspp_load_vaginal_penile_protection.png", width = 2700, height = 1200, res = 300)
 
+# Plot
 ggplot(paired_data, aes(x = Vaginal, y = `Penile skin`)) +
   geom_point(aes(shape = protection), color = "violet", size = 4) +
   geom_smooth(method = "lm", se = TRUE, color = "black") +
@@ -92,16 +102,18 @@ ggplot(paired_data, aes(x = Vaginal, y = `Penile skin`)) +
            hjust = 0, vjust = 1) +
   scale_shape_manual(values = c("yes" = 16, "no" = 17, "not_available" = 8), #decide on shapes (protection)
                      name = "Protection") +
+  
+  # Axis titles
   labs(
-    title = expression(italic("Gardnerella spp.") * " load: vaginal and penile within couples at Timepoint 0"),
+    title = expression(italic("Gardnerella spp.") * " load: vaginal and penile within couples at Timepoint 1"),
     x = "Vaginal (log10 DNA copies/swab)",
     y = "Penile skin (log10 DNA copies/swab)"
   ) +
+  
   theme_minimal() +
   theme(
     axis.title = element_text(face = "bold"),
     axis.text = element_text(size = 12),
     legend.position = "right"
   )
-
 dev.off()
